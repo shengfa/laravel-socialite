@@ -12,7 +12,7 @@ class SocialAccountController extends Controller
 
     public function __construct(Request $request)
     {
-        $this->setProviderDetail(strtoupper($request->route('provider')));
+        $this->setProviderDetail($request->route('provider'));
     }
 
     /**
@@ -34,12 +34,16 @@ class SocialAccountController extends Controller
     {
         $handleCallback = 'handle'.ucfirst($provider).'Callback';
         try {
-            $user = \Socialite::with($provider)->fields($this->field)->user();
+            $user = \Socialite::with($provider)->fields($this->field)->use();
         } catch (\Exception $e) {
-            return redirect('/login');
+            return $e;
         }
 
-        $user = $this->$handleCallback($user);
+        try {
+            $this->$handleCallback($user);
+        } catch (\Exception $e) {
+            return redirect('/login'); // permission not granted, should redirect to explain page
+        }
 
         $authUser = $accountService->findOrCreate(
             $user,
@@ -54,31 +58,34 @@ class SocialAccountController extends Controller
     protected function setProviderDetail($provider)
     {
         switch ($provider) {
-            case 'FACEBOOK':
+            case 'facebook':
                 $this->permission = json_decode(env('FACEBOOK_PERMISSION'), true);
                 $this->field = json_decode(env('FACEBOOK_FIELD'), true);
                 break;
 
             default:
-                throw new Exception("Wrong provider", 1);
+                throw new \Exception("Wrong provider", 1);
                 break;
         }
     }
 
-    protected function handleFacebookCallback($user)
+    protected function handleFacebookCallback(\Laravel\Socialite\Two\User $user)
     {
-        // check if permission granted
+        $this->isFacebookPermissionGranted($user);
+
+    }
+
+    protected function isFacebookPermissionGranted(\Laravel\Socialite\Two\User $user) :bool
+    {
         $declinedPermission = [];
-        foreach ($user['permissions']['data'] as $permission) {
-            if ($permission['status'] == 'declined') {
-                array_push($declinedPermission, $permission['permission']);
+        if (!empty($user['permissions']['data'])) {
+            foreach ($user['permissions']['data'] as $permission) {
+                if ($permission['status'] == 'declined') {
+                    array_push($declinedPermission, $permission['permission']);
+                }
             }
         }
 
-        if (!empty(array_intersect($declinedPermission, $this->permission))) {
-            return redirect('/login');
-        }
-
-        return $user;
+        return empty(array_intersect($declinedPermission, $this->permission));
     }
 }
