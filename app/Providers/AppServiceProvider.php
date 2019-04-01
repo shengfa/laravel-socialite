@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Providers\Socialite\FacebookProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +24,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        $this->bootFacebookSocialite();
+    }
+
+    /**
+     * Overwrite Socialite FacebookProvider
+     *
+     * @return void
+     */
+    private function bootFacebookSocialite()
+    {
+        $socialite = $this->app->make('Laravel\Socialite\Contracts\Factory');
+        $socialite->extend(
+            'facebook',
+            function ($app) use ($socialite) {
+                $config = $app['config']['services.facebook'];
+                return $socialite->buildProvider(FacebookProvider::class, $config);
+            }
+        );
     }
 }

@@ -10,10 +10,9 @@ class SocialAccountController extends Controller
     protected $permission;
     protected $field;
 
-    public function __construct()
+    public function __construct(Request $request)
     {
-        $this->permission = json_decode(env('FACEBOOK_PERMISSION'), true);
-        $this->field = json_decode(env('FACEBOOK_FIELD'), true);
+        $this->setProviderDetail(strtoupper($request->route('provider')));
     }
 
     /**
@@ -33,12 +32,41 @@ class SocialAccountController extends Controller
      */
     public function handleProviderCallback(\App\SocialAccountService $accountService, $provider)
     {
+        $handleCallback = 'handle'.ucfirst($provider).'Callback';
         try {
             $user = \Socialite::with($provider)->fields($this->field)->user();
         } catch (\Exception $e) {
             return redirect('/login');
         }
 
+        $user = $this->$handleCallback($user);
+
+        $authUser = $accountService->findOrCreate(
+            $user,
+            $provider
+        );
+
+        auth()->login($authUser, true);
+
+        return redirect()->to('/home');
+    }
+
+    protected function setProviderDetail($provider)
+    {
+        switch ($provider) {
+            case 'FACEBOOK':
+                $this->permission = json_decode(env('FACEBOOK_PERMISSION'), true);
+                $this->field = json_decode(env('FACEBOOK_FIELD'), true);
+                break;
+
+            default:
+                throw new Exception("Wrong provider", 1);
+                break;
+        }
+    }
+
+    protected function handleFacebookCallback($user)
+    {
         // check if permission granted
         $declinedPermission = [];
         foreach ($user['permissions']['data'] as $permission) {
@@ -51,13 +79,6 @@ class SocialAccountController extends Controller
             return redirect('/login');
         }
 
-        $authUser = $accountService->findOrCreate(
-            $user,
-            $provider
-        );
-
-        auth()->login($authUser, true);
-
-        return redirect()->to('/home');
+        return $user;
     }
 }
