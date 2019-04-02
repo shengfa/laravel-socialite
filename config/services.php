@@ -20,6 +20,12 @@ return [
         'redirect'      => env('FACEBOOK_URL'),
     ],
 
+    'line' => [
+        'client_id'     => env('LINE_CHANNEL_ID'),
+        'client_secret' => env('LINE_SECRET'),
+        'redirect'      => env('LINE_REDIRECT_URI'),
+    ],
+
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
         'secret' => env('MAILGUN_SECRET'),

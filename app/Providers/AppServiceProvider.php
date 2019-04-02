@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use App\Providers\Socialite\FacebookProvider;
+use App\Providers\Socialite\LineProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->bootFacebookSocialite();
+        $this->bootLineSocialite();
     }
 
     /**
@@ -40,6 +42,23 @@ class AppServiceProvider extends ServiceProvider
             function ($app) use ($socialite) {
                 $config = $app['config']['services.facebook'];
                 return $socialite->buildProvider(FacebookProvider::class, $config);
+            }
+        );
+    }
+
+    /**
+     * Create Socialite LineProvider
+     *
+     * @return void
+     */
+    private function bootLineSocialite()
+    {
+        $socialite = $this->app->make('Laravel\Socialite\Contracts\Factory');
+        $socialite->extend(
+            'line',
+            function ($app) use ($socialite) {
+                $config = $app['config']['services.line'];
+                return $socialite->buildProvider(LineProvider::class, $config);
             }
         );
     }

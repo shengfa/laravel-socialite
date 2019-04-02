@@ -12,6 +12,7 @@ class SocialAccountController extends Controller
 
     public function __construct(Request $request)
     {
+        session_start();
         $this->setProviderDetail($request->route('provider'));
     }
 
@@ -34,7 +35,7 @@ class SocialAccountController extends Controller
     {
         $handleCallback = 'handle'.ucfirst($provider).'Callback';
         try {
-            $user = \Socialite::with($provider)->fields($this->field)->use();
+            $user = \Socialite::with($provider)->user();
         } catch (\Exception $e) {
             return $e;
         }
@@ -63,6 +64,11 @@ class SocialAccountController extends Controller
                 $this->field = json_decode(env('FACEBOOK_FIELD'), true);
                 break;
 
+            case 'line':
+                $this->permission = json_decode(env('LINE_PERMISSION'), true);
+                $this->field = json_decode(env('LINE_FIELD'), true);
+                break;
+
             default:
                 throw new \Exception("Wrong provider", 1);
                 break;
@@ -72,7 +78,6 @@ class SocialAccountController extends Controller
     protected function handleFacebookCallback(\Laravel\Socialite\Two\User $user)
     {
         $this->isFacebookPermissionGranted($user);
-
     }
 
     protected function isFacebookPermissionGranted(\Laravel\Socialite\Two\User $user) :bool
@@ -87,5 +92,10 @@ class SocialAccountController extends Controller
         }
 
         return empty(array_intersect($declinedPermission, $this->permission));
+    }
+
+    protected function handleLineCallback(\Laravel\Socialite\Two\User $user)
+    {
+        // $this->isFacebookPermissionGranted($user);
     }
 }
